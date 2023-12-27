@@ -1509,6 +1509,7 @@ var _ = Describe("Node Health Check CR", func() {
 			condType2         = v1.NodeConditionType("type2")
 			condStatusMatch   = v1.ConditionTrue
 			condStatusNoMatch = v1.ConditionUnknown
+			testedNode        *v1.Node
 
 			now                      = time.Now()
 			unhealthyDuration        = metav1.Duration{Duration: 10 * time.Second}
@@ -1554,9 +1555,10 @@ var _ = Describe("Node Health Check CR", func() {
 						LastTransitionTime: expiredTransitionTime,
 					},
 				}
+				testedNode = regNewNode("test-node-conditons", nodeConditions)
 			})
 			It("should not report match, should not report expiry", func() {
-				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, nodeConditions)
+				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, testedNode)
 				Expect(match).To(BeFalse(), "expected healthy")
 				Expect(expire).To(BeNil(), "expected expire to not be set")
 			})
@@ -1571,9 +1573,10 @@ var _ = Describe("Node Health Check CR", func() {
 						LastTransitionTime: notExpiredTransitionTime,
 					},
 				}
+				testedNode = regNewNode("test-node-conditons", nodeConditions)
 			})
 			It("should not report match, should report expiry", func() {
-				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, nodeConditions)
+				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, testedNode)
 				Expect(match).To(BeFalse(), "expected healthy")
 				Expect(expire).ToNot(BeNil(), "expected expire to be set")
 				Expect(*expire).To(Equal(expireIn+expireBuffer), "expected expire in 1 second")
@@ -1594,9 +1597,10 @@ var _ = Describe("Node Health Check CR", func() {
 						LastTransitionTime: expiredTransitionTime,
 					},
 				}
+				testedNode = regNewNode("test-node-conditons", nodeConditions)
 			})
 			It("should report match, should not report expiry", func() {
-				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, nodeConditions)
+				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, testedNode)
 				Expect(match).To(BeTrue(), "expected not healthy")
 				Expect(expire).To(BeNil(), "expected expire to not be set")
 			})
@@ -1616,9 +1620,10 @@ var _ = Describe("Node Health Check CR", func() {
 						LastTransitionTime: notExpiredTransitionTime,
 					},
 				}
+				testedNode = regNewNode("test-node-conditons", nodeConditions)
 			})
 			It("should not report match, should not report expiry", func() {
-				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, nodeConditions)
+				match, expire := r.matchesUnhealthyConditions(unhealthyConditions, testedNode)
 				Expect(match).To(BeFalse(), "expected healthy")
 				Expect(expire).ToNot(BeNil(), "expected expire to be set")
 				Expect(*expire).To(Equal(expireIn+expireBuffer), "expected expire in 1 second")
@@ -1771,5 +1776,15 @@ func newNode(name string, t v1.NodeConditionType, s v1.ConditionStatus, isContro
 				},
 			},
 		},
+	}
+}
+
+func regNewNode(name string, nc []v1.NodeCondition) *v1.Node {
+	return &v1.Node{
+		TypeMeta: metav1.TypeMeta{Kind: "Node"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1.NodeStatus{Conditions: nc},
 	}
 }

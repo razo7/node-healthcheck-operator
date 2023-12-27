@@ -17,5 +17,5 @@ generatorOptions:
 
 images:
 - name: controller
-  newName: quay.io/medik8s/node-healthcheck-operator
-  newTag: latest
+  newName: quay.io/oraz/node-healthcheck-operator
+  newTag: v0.6.1-testing-cyclic-remediation-5

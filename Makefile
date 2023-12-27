@@ -412,3 +412,14 @@ container-build-metrics: ## Build containers
 .PHONY: container-push
 container-push:  ## Push containers (NOTE: catalog can't be build before bundle was pushed)
 	make docker-push bundle-push index-build index-push
+
+# https://quay.io/repository/oraz/node-healthcheck-operator
+.PHONY: recreate-nhc
+export BUNDLE_RUN_NAMESPACE?=openshift-operators
+export VERSION=0.6.1-testing-cyclic-remediation-5
+export CONSOLE_PLUGIN_TAG=latest
+export IMAGE_TAG=v$(VERSION)
+export IMAGE_REGISTRY=quay.io/oraz
+recreate-nhc:
+	# $(MAKE) container-build container-push
+	$(MAKE) bundle-cleanup bundle-run

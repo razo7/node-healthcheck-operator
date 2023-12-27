@@ -48,11 +48,11 @@ metadata:
     createdAt: ""
     description: Detect failed Nodes and trigger remediation with e.g. Self Node Remediation.
     olm.skipRange: '>=0.0.1'
-    operators.operatorframework.io/builder: operator-sdk-v1.31.0
+    operators.operatorframework.io/builder: operator-sdk-v1.26.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/medik8s/node-healthcheck-operator
     support: Medik8s
-  name: node-healthcheck-operator.v0.0.1
+  name: node-healthcheck-operator.v0.6.1-testing-cyclic-remediation-5
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -433,7 +433,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                image: quay.io/medik8s/node-healthcheck-operator:latest
+                image: quay.io/oraz/node-healthcheck-operator:v0.6.1-testing-cyclic-remediation-5
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -614,7 +614,7 @@ spec:
   provider:
     name: Medik8s
     url: https://github.com/medik8s
-  version: 0.0.1
+  version: 0.6.1-testing-cyclic-remediation-5
   webhookdefinitions:
   - admissionReviewVersions:
     - v1
