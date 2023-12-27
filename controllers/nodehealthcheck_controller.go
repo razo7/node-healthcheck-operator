@@ -440,20 +440,23 @@ func (r *NodeHealthCheckReconciler) isClusterUpgrading() bool {
 
 func (r *NodeHealthCheckReconciler) checkNodeConditions(nodes []v1.Node, nhc *remediationv1alpha1.NodeHealthCheck) (notMatchingNodes []v1.Node, matchingNodes []v1.Node, requeueAfter *time.Duration) {
 	for _, node := range nodes {
-		if matchesUnhealthyConditions, thisRequeueAfter := r.matchesUnhealthyConditions(nhc.Spec.UnhealthyConditions, node.Status.Conditions); !matchesUnhealthyConditions {
+		if matchesUnhealthyConditions, thisRequeueAfter := r.matchesUnhealthyConditions(nhc.Spec.UnhealthyConditions, &node); !matchesUnhealthyConditions {
+			// r.Log.Info("Both of the unhealthy conditions were not match or one of them met but did not expire", "node name", node.Name)
 			notMatchingNodes = append(notMatchingNodes, node)
 			requeueAfter = utils.MinRequeueDuration(requeueAfter, thisRequeueAfter)
 		} else if r.MHCChecker.NeedIgnoreNode(&node) {
 			// consider terminating nodes being handled by MHC as healthy, from NHC point of view
 			notMatchingNodes = append(notMatchingNodes, node)
 		} else {
+			// r.Log.Info("One of the unhealthy conditions was matched and timeout was expired", "node name", node.Name)
 			matchingNodes = append(matchingNodes, node)
 		}
 	}
 	return
 }
 
-func (r *NodeHealthCheckReconciler) matchesUnhealthyConditions(conditionTests []remediationv1alpha1.UnhealthyCondition, nodeConditions []v1.NodeCondition) (bool, *time.Duration) {
+func (r *NodeHealthCheckReconciler) matchesUnhealthyConditions(conditionTests []remediationv1alpha1.UnhealthyCondition, node *v1.Node) (bool, *time.Duration) {
+	nodeConditions := node.Status.Conditions
 	nodeConditionByType := make(map[v1.NodeConditionType]v1.NodeCondition)
 	for _, nc := range nodeConditions {
 		nodeConditionByType[nc.Type] = nc
@@ -462,6 +465,7 @@ func (r *NodeHealthCheckReconciler) matchesUnhealthyConditions(conditionTests []
 	var expiresAfter *time.Duration
 	for _, c := range conditionTests {
 		n, exists := nodeConditionByType[c.Type]
+		r.Log.Info("Comparing condition status between node and expected unhealthy", "Node name", node.Name, "condition type", c.Type, "node status", n.Status, "unhealthy status", c.Status)
 		if !exists {
 			continue
 		}
@@ -469,14 +473,17 @@ func (r *NodeHealthCheckReconciler) matchesUnhealthyConditions(conditionTests []
 			now := currentTime()
 			if now.After(n.LastTransitionTime.Add(c.Duration.Duration)) {
 				// unhealthy condition duration expired, node is unhealthy
+				r.Log.Info("Unhealthy condition met and expired", "Node name", node.Name, "condition type", c.Type, "node status", n.Status, "unhealthy status", c.Status, "last transisiton", n.LastTransitionTime, "timeout", c.Duration.Duration)
 				return true, nil
 			} else {
 				// unhealthy condition duration not expired yet, node is healthy. Requeue when duration expires
 				thisExpiresAfter := n.LastTransitionTime.Add(c.Duration.Duration).Sub(now) + 1*time.Second
 				expiresAfter = utils.MinRequeueDuration(expiresAfter, &thisExpiresAfter)
+				r.Log.Info("Unhealthy condition met, but did not expire", "Node name", node.Name, "condition type", c.Type, "node status", n.Status, "unhealthy status", c.Status, "future expiration time", thisExpiresAfter)
 			}
 		}
 	}
+	r.Log.Info("Node is considred as healthy", "Node name", node.Name, "Ready status", nodeConditionByType["Ready"].Status)
 	return false, expiresAfter
 }
 
