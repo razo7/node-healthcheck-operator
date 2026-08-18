@@ -25,3 +25,6 @@ testbin/*
 *~
 testdata/.remediators/
 .history/*
+
+catalog/
+catalog.Dockerfile
